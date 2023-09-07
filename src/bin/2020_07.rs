@@ -1,7 +1,9 @@
+use ahash::{AHashMap, AHashSet};
 use clap::Parser;
 use sscanf::sscanf;
 use std::fs;
-use fnv::{FnvHashSet, FnvHashMap};
+
+const MY_BAG: &str = "shiny gold";
 
 #[derive(Parser)]
 struct Cli {
@@ -9,66 +11,117 @@ struct Cli {
     input: String,
 }
 
-fn parse(raw_inp: &str) -> Vec<(&str, &str)> {
-    raw_inp
-        .trim()
-        .split("\n")
-        .map(|item| sscanf!(item, "{str} bags contain {str}."))
-        .map(|item| item.expect("invalid input"))
+fn parse_bag_contents(inp: &str) -> Vec<(usize, &str)> {
+    if inp == "no other bags" {
+        return vec![];
+    }
+
+    inp.trim()
+        .split(", ")
+        .map(|i| i.rsplit_once(' ').expect("parse failed: split last word").0) // get rid of "bag" / "bags"
+        .map(|i| {
+            let (start, end) = i.split_once(' ').expect("parse failed: split n/bags");
+            let n: usize = start.parse().expect("parse failed: parse n");
+            (n, end)
+        })
         .collect()
 }
 
-fn calculate(data: &Vec<(&str, &str)>) -> (usize, usize) {
-    let mut p1_hs: FnvHashSet<&str> = FnvHashSet::default();
-    p1_hs.insert("shiny gold");
-    
+fn parse(raw_inp: &str) -> Vec<(&str, Vec<(usize, &str)>)> {
+    raw_inp
+        .trim()
+        .split('\n')
+        .map(|item| sscanf!(item, "{str} bags contain {str}."))
+        .map(|item| item.expect("invalid input"))
+        .map(|(bag, subbags)| (bag, parse_bag_contents(subbags)))
+        .collect()
+}
+
+fn subbags_contain(subbag: &[(usize, &str)], bag: &str) -> bool {
+    subbag.iter().any(|x| x.1 == bag)
+}
+
+fn calculate_p1(data: &[(&str, Vec<(usize, &str)>)]) -> usize {
+    let mut hs: AHashSet<&str> = AHashSet::default();
+    hs.insert(MY_BAG);
+
     let mut any_changed = true;
-    
+
     while any_changed {
         any_changed = false;
         for (bag, subbags) in data {
-            if !p1_hs.contains(bag) {
-                if p1_hs.iter().any(|item| subbags.contains(item)) {
-                    p1_hs.insert(bag);
-                    any_changed = true;
-                }
+            if hs.iter().any(|item| subbags_contain(subbags, item)) {
+                any_changed |= hs.insert(bag);
             }
         }
     }
-    
-    let mut p2_map: FnvHashMap<&str, usize> = FnvHashMap::default();
-    
-    for (bag, subbags) in data {
-        if subbags == &"no other bags" {
-            p2_map.insert(bag, 1);
-        }
-    }
-    
-    any_changed = true;
+
+    hs.len() - 1
+}
+
+fn calculate_p2(data: &[(&str, Vec<(usize, &str)>)]) -> usize {
+    let mut map: AHashMap<&str, usize> = AHashMap::default();
+
+    let mut any_changed = true;
     while any_changed {
         any_changed = false;
         for (bag, subbags) in data {
-            let sb: Vec<&str> = subbags.split(", ").map(|i| i[0..i.len()-4].trim()).collect();
-
-            if !p2_map.contains_key(bag) && sb.iter().all(|x| p2_map.contains_key(&x[2..])) {
+            if !map.contains_key(bag) && subbags.iter().all(|x| map.contains_key(x.1)) {
                 let mut c = 1;
-                for i in sb.iter() {
-                    let n: usize = i[0..1].parse().expect("parse failed");
-                    c += n * p2_map.get(&i[2..]).expect("just checked this");
+                for (n, bag_type) in subbags.iter() {
+                    c += n * map.get(bag_type).unwrap();
                 }
-                p2_map.insert(bag, c);
+                map.insert(bag, c);
                 any_changed = true;
             }
         }
+        if let Some(result) = map.get(MY_BAG) {
+            return result - 1;
+        }
     }
-    
-    (p1_hs.len() - 1, *p2_map.get("shiny gold").expect("p2 calc failed") - 1)
+
+    panic!("p2 calculation failed");
 }
 
 fn main() {
     let args = Cli::parse();
     let raw_inp = fs::read_to_string(args.input).expect("can't open input file");
     let data = parse(&raw_inp);
-    let (p1, p2) = calculate(&data);
+    let p1 = calculate_p1(&data);
+    let p2 = calculate_p2(&data);
     println!("{}\n{}", p1, p2);
+}
+
+#[cfg(test)]
+const P1_TEST_DATA: &str = "light red bags contain 1 bright white bag, 2 muted yellow bags.
+dark orange bags contain 3 bright white bags, 4 muted yellow bags.
+bright white bags contain 1 shiny gold bag.
+muted yellow bags contain 2 shiny gold bags, 9 faded blue bags.
+shiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.
+dark olive bags contain 3 faded blue bags, 4 dotted black bags.
+vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.
+faded blue bags contain no other bags.
+dotted black bags contain no other bags.";
+
+#[test]
+fn test_p1_example() {
+    assert_eq!(calculate_p1(&parse(P1_TEST_DATA)), 4);
+}
+
+#[test]
+fn test_p2_example_1() {
+    assert_eq!(calculate_p2(&parse(P1_TEST_DATA)), 32);
+}
+
+#[test]
+fn test_p2_example_2() {
+    let test_data = "shiny gold bags contain 2 dark red bags.
+dark red bags contain 2 dark orange bags.
+dark orange bags contain 2 dark yellow bags.
+dark yellow bags contain 2 dark green bags.
+dark green bags contain 2 dark blue bags.
+dark blue bags contain 2 dark violet bags.
+dark violet bags contain no other bags.";
+
+    assert_eq!(calculate_p2(&parse(test_data)), 126);
 }

@@ -1,5 +1,5 @@
+use ahash::AHashSet;
 use clap::Parser;
-use fnv::FnvHashSet;
 use std::fs;
 
 #[derive(Parser)]
@@ -21,7 +21,7 @@ fn calculate(data: &[Vec<&str>]) -> (usize, usize) {
     let mut p2 = 0;
 
     for group in data.iter() {
-        let mut hs: FnvHashSet<char> = FnvHashSet::default();
+        let mut hs: AHashSet<char> = AHashSet::default();
         for person in group.iter() {
             for c in person.chars() {
                 hs.insert(c);

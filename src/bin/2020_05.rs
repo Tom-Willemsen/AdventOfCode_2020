@@ -1,5 +1,5 @@
+use ahash::AHashSet;
 use clap::Parser;
-use fnv::FnvHashSet;
 use std::cmp::{max, min};
 use std::fs;
 
@@ -37,7 +37,7 @@ fn main() {
     let mut max_seat = u64::MIN;
     let mut min_seat = u64::MAX;
 
-    let mut occupied_seats: FnvHashSet<u64> = FnvHashSet::default();
+    let mut occupied_seats: AHashSet<u64> = AHashSet::default();
 
     for item in data.iter() {
         if item.len() != 10 {
