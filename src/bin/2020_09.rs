@@ -37,9 +37,9 @@ fn calculate_p1(data: &[u64], window_size: usize) -> u64 {
 }
 
 fn calculate_p2(data: &[u64], target: u64) -> u64 {
-    let mut begin = 0;
-    let mut end = 0;
-    let mut sum = 0;
+    let mut begin: usize = 0;
+    let mut end: usize = 0;
+    let mut sum: u64 = 0;
 
     loop {
         match sum.cmp(&target) {
@@ -71,7 +71,7 @@ fn main() {
 }
 
 #[cfg(test)]
-const TEST_DATA: &[u64] = &[
+const TEST_DATA: [u64; 20] = [
     35, 20, 15, 25, 47, 40, 62, 55, 65, 95, 102, 117, 150, 182, 127, 219, 299, 277, 309, 576,
 ];
 

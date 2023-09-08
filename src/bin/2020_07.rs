@@ -1,6 +1,5 @@
 use ahash::{AHashMap, AHashSet};
 use clap::Parser;
-use sscanf::sscanf;
 use std::fs;
 
 const MY_BAG: &str = "shiny gold";
@@ -31,36 +30,31 @@ fn parse(raw_inp: &str) -> Vec<(&str, Vec<(usize, &str)>)> {
     raw_inp
         .trim()
         .split('\n')
-        .map(|item| sscanf!(item, "{str} bags contain {str}."))
+        .map(|item| item.split_once(" bags contain "))
         .map(|item| item.expect("invalid input"))
+        .map(|(bag, subbags)| (bag, subbags.trim_end_matches('.')))
         .map(|(bag, subbags)| (bag, parse_bag_contents(subbags)))
         .collect()
 }
 
-fn subbags_contain(subbag: &[(usize, &str)], bag: &str) -> bool {
-    subbag.iter().any(|x| x.1 == bag)
-}
-
 fn calculate_p1(data: &[(&str, Vec<(usize, &str)>)]) -> usize {
-    let mut hs: AHashSet<&str> = AHashSet::default();
-    hs.insert(MY_BAG);
-
+    let mut reachable: AHashSet<&str> = AHashSet::default();
+    reachable.insert(MY_BAG);
+ 
     let mut any_changed = true;
-
     while any_changed {
         any_changed = false;
         for (bag, subbags) in data {
-            if hs.iter().any(|item| subbags_contain(subbags, item)) {
-                any_changed |= hs.insert(bag);
+            if !reachable.contains(bag) && subbags.iter().any(|x| reachable.contains(x.1)) {
+                any_changed |= reachable.insert(bag);
             }
         }
     }
-
-    hs.len() - 1
+    reachable.len() - 1
 }
 
 fn calculate_p2(data: &[(&str, Vec<(usize, &str)>)]) -> usize {
-    let mut map: AHashMap<&str, usize> = AHashMap::default();
+    let mut map: AHashMap<&str, usize> = AHashMap::with_capacity(data.len());
 
     let mut any_changed = true;
     while any_changed {

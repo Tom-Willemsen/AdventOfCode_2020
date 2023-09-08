@@ -1,5 +1,4 @@
 use clap::Parser;
-use sscanf::sscanf;
 use std::fs;
 
 #[derive(Parser)]
@@ -16,8 +15,19 @@ struct Password {
 }
 
 fn parse(inp: &str) -> Password {
-    let parsed = sscanf!(inp, "{usize}-{usize} {char}: {str}");
-    let (start, end, needle, pwd) = parsed.expect("unable to parse input");
+    // takes ~6ms (!)
+    // let parsed = sscanf!(inp, "{usize}-{usize} {char}: {str}");
+    // let (start, end, needle, pwd) = parsed.expect("unable to parse input");
+
+    let split: Vec<&str> = inp.split(' ').collect();
+    let (start_s, end_s): (&str, &str) = split[0].split_once('-').expect("split - fail");
+    let (start, end): (usize, usize) = (
+        start_s.parse().expect("parse as usize fail"),
+        end_s.parse().expect("parse as usize fail"),
+    );
+    let needle: char = split[1].chars().next().expect("needle empty");
+    let pwd = split[2];
+
     Password {
         start,
         end,
