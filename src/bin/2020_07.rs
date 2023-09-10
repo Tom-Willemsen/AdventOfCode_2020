@@ -40,7 +40,7 @@ fn parse(raw_inp: &str) -> Vec<(&str, Vec<(usize, &str)>)> {
 fn calculate_p1(data: &[(&str, Vec<(usize, &str)>)]) -> usize {
     let mut reachable: AHashSet<&str> = AHashSet::default();
     reachable.insert(MY_BAG);
- 
+
     let mut any_changed = true;
     while any_changed {
         any_changed = false;
