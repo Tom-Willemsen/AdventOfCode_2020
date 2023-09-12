@@ -84,22 +84,29 @@ fn main() {
 }
 
 #[cfg(test)]
-const TEST_DATA: &str = "nop +0
-acc +1
-jmp +4
-acc +3
-jmp -3
-acc -99
-acc +1
-jmp -4
-acc +6";
+mod tests {
+    use super::*;
 
-#[test]
-fn test_p1_example() {
-    assert_eq!(calculate_p1(&parse(TEST_DATA)), 5);
-}
+    const TEST_DATA: &str = include_str!("../../inputs/examples/2020_08");
+    const REAL_DATA: &str = include_str!("../../inputs/real/2020_08");
 
-#[test]
-fn test_p2_example() {
-    assert_eq!(calculate_p2(&parse(TEST_DATA)), 8);
+    #[test]
+    fn test_p1_example() {
+        assert_eq!(calculate_p1(&parse(TEST_DATA)), 5);
+    }
+
+    #[test]
+    fn test_p2_example() {
+        assert_eq!(calculate_p2(&parse(TEST_DATA)), 8);
+    }
+
+    #[test]
+    fn test_p1_real() {
+        assert_eq!(calculate_p1(&parse(REAL_DATA)), 1723);
+    }
+
+    #[test]
+    fn test_p2_real() {
+        assert_eq!(calculate_p2(&parse(REAL_DATA)), 846);
+    }
 }

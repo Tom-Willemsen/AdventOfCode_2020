@@ -30,6 +30,7 @@ fn parse(raw_inp: &str) -> Vec<(&str, Vec<(usize, &str)>)> {
     raw_inp
         .trim()
         .split('\n')
+        .map(|line| line.trim())
         .map(|item| item.split_once(" bags contain "))
         .map(|item| item.expect("invalid input"))
         .map(|(bag, subbags)| (bag, subbags.trim_end_matches('.')))
@@ -87,35 +88,51 @@ fn main() {
 }
 
 #[cfg(test)]
-const P1_TEST_DATA: &str = "light red bags contain 1 bright white bag, 2 muted yellow bags.
-dark orange bags contain 3 bright white bags, 4 muted yellow bags.
-bright white bags contain 1 shiny gold bag.
-muted yellow bags contain 2 shiny gold bags, 9 faded blue bags.
-shiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.
-dark olive bags contain 3 faded blue bags, 4 dotted black bags.
-vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.
-faded blue bags contain no other bags.
-dotted black bags contain no other bags.";
+mod tests {
+    use super::*;
 
-#[test]
-fn test_p1_example() {
-    assert_eq!(calculate_p1(&parse(P1_TEST_DATA)), 4);
-}
+    const P1_TEST_DATA: &str = "light red bags contain 1 bright white bag, 2 muted yellow bags.
+    dark orange bags contain 3 bright white bags, 4 muted yellow bags.
+    bright white bags contain 1 shiny gold bag.
+    muted yellow bags contain 2 shiny gold bags, 9 faded blue bags.
+    shiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.
+    dark olive bags contain 3 faded blue bags, 4 dotted black bags.
+    vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.
+    faded blue bags contain no other bags.
+    dotted black bags contain no other bags.";
 
-#[test]
-fn test_p2_example_1() {
-    assert_eq!(calculate_p2(&parse(P1_TEST_DATA)), 32);
-}
+    const P2_TEST_DATA: &str = "shiny gold bags contain 2 dark red bags.
+    dark red bags contain 2 dark orange bags.
+    dark orange bags contain 2 dark yellow bags.
+    dark yellow bags contain 2 dark green bags.
+    dark green bags contain 2 dark blue bags.
+    dark blue bags contain 2 dark violet bags.
+    dark violet bags contain no other bags.";
 
-#[test]
-fn test_p2_example_2() {
-    let test_data = "shiny gold bags contain 2 dark red bags.
-dark red bags contain 2 dark orange bags.
-dark orange bags contain 2 dark yellow bags.
-dark yellow bags contain 2 dark green bags.
-dark green bags contain 2 dark blue bags.
-dark blue bags contain 2 dark violet bags.
-dark violet bags contain no other bags.";
+    const REAL_DATA: &str = include_str!("../../inputs/real/2020_07");
 
-    assert_eq!(calculate_p2(&parse(test_data)), 126);
+    #[test]
+    fn test_p1_example() {
+        assert_eq!(calculate_p1(&parse(&P1_TEST_DATA)), 4);
+    }
+
+    #[test]
+    fn test_p2_example_1() {
+        assert_eq!(calculate_p2(&parse(&P1_TEST_DATA)), 32);
+    }
+
+    #[test]
+    fn test_p2_example_2() {
+        assert_eq!(calculate_p2(&parse(&P2_TEST_DATA)), 126);
+    }
+
+    #[test]
+    fn test_p1_real() {
+        assert_eq!(calculate_p1(&parse(&REAL_DATA)), 229);
+    }
+
+    #[test]
+    fn test_p2_real() {
+        assert_eq!(calculate_p2(&parse(&REAL_DATA)), 6683);
+    }
 }

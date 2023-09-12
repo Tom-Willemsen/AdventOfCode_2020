@@ -71,16 +71,29 @@ fn main() {
 }
 
 #[cfg(test)]
-const TEST_DATA: [u64; 20] = [
-    35, 20, 15, 25, 47, 40, 62, 55, 65, 95, 102, 117, 150, 182, 127, 219, 299, 277, 309, 576,
-];
+mod tests {
+    use super::*;
 
-#[test]
-fn test_p1_example() {
-    assert_eq!(calculate_p1(&TEST_DATA, 5), 127);
-}
+    const TEST_DATA: &str = include_str!("../../inputs/examples/2020_09");
+    const REAL_DATA: &str = include_str!("../../inputs/real/2020_09");
 
-#[test]
-fn test_p2_example() {
-    assert_eq!(calculate_p2(&TEST_DATA, 127), 62);
+    #[test]
+    fn test_p1_example() {
+        assert_eq!(calculate_p1(&parse(&TEST_DATA), 5), 127);
+    }
+
+    #[test]
+    fn test_p2_example() {
+        assert_eq!(calculate_p2(&parse(&TEST_DATA), 127), 62);
+    }
+
+    #[test]
+    fn test_p1_real() {
+        assert_eq!(calculate_p1(&parse(&REAL_DATA), 25), 10884537);
+    }
+
+    #[test]
+    fn test_p2_real() {
+        assert_eq!(calculate_p2(&parse(&REAL_DATA), 10884537), 1261309);
+    }
 }

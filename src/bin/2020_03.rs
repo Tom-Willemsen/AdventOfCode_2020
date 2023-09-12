@@ -7,7 +7,7 @@ struct Cli {
     input: String,
 }
 
-fn parse(raw_inp: String) -> Vec<Vec<bool>> {
+fn parse(raw_inp: &str) -> Vec<Vec<bool>> {
     raw_inp
         .trim()
         .split('\n')
@@ -16,7 +16,7 @@ fn parse(raw_inp: String) -> Vec<Vec<bool>> {
         .collect()
 }
 
-fn count_trees(data: &Vec<Vec<bool>>, down: usize, right: usize) -> i64 {
+fn count_trees(data: &Vec<Vec<bool>>, down: usize, right: usize) -> usize {
     let x_size = data[0].len();
 
     let mut trees = 0;
@@ -33,41 +33,55 @@ fn count_trees(data: &Vec<Vec<bool>>, down: usize, right: usize) -> i64 {
     trees
 }
 
+fn calculate(data: &Vec<Vec<bool>>) -> (usize, usize) {
+    let p1 = count_trees(data, 1, 3);
+    let p2 = p1
+        * count_trees(data, 1, 1)
+        * count_trees(data, 1, 5)
+        * count_trees(data, 1, 7)
+        * count_trees(data, 2, 1);
+    (p1, p2)
+}
+
 fn main() {
     let args = Cli::parse();
 
     let raw_inp = fs::read_to_string(args.input).expect("can't open input file");
 
-    let data = parse(raw_inp);
+    let data = parse(&raw_inp);
 
-    let p1 = count_trees(&data, 1, 3);
-    let p2 = p1
-        * count_trees(&data, 1, 1)
-        * count_trees(&data, 1, 5)
-        * count_trees(&data, 1, 7)
-        * count_trees(&data, 2, 1);
+    let (p1, p2) = calculate(&data);
 
     println!("{}\n{}", p1, p2);
 }
 
-#[test]
-fn test_example() {
-    let raw_data = "..##.......
-        #...#...#..
-        .#....#..#.
-        ..#.#...#.#
-        .#...##..#.
-        ..#.##.....
-        .#.#.#....#
-        .#........#
-        #.##...#...
-        #...##....#
-        .#..#...#.#
-        ";
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    assert_eq!(count_trees(&parse(raw_data.to_string()), 1, 1), 2);
-    assert_eq!(count_trees(&parse(raw_data.to_string()), 1, 3), 7);
-    assert_eq!(count_trees(&parse(raw_data.to_string()), 1, 5), 3);
-    assert_eq!(count_trees(&parse(raw_data.to_string()), 1, 7), 4);
-    assert_eq!(count_trees(&parse(raw_data.to_string()), 2, 1), 2);
+    const EXAMPLE_DATA: &str = include_str!("../../inputs/examples/2020_03");
+    const REAL_DATA: &str = include_str!("../../inputs/real/2020_03");
+
+    #[test]
+    fn test_count_trees_examples() {
+        assert_eq!(count_trees(&parse(&EXAMPLE_DATA), 1, 1), 2);
+        assert_eq!(count_trees(&parse(&EXAMPLE_DATA), 1, 3), 7);
+        assert_eq!(count_trees(&parse(&EXAMPLE_DATA), 1, 5), 3);
+        assert_eq!(count_trees(&parse(&EXAMPLE_DATA), 1, 7), 4);
+        assert_eq!(count_trees(&parse(&EXAMPLE_DATA), 2, 1), 2);
+    }
+
+    #[test]
+    fn test_example() {
+        let (p1, p2) = calculate(&parse(&EXAMPLE_DATA));
+        assert_eq!(p1, 7);
+        assert_eq!(p2, 336);
+    }
+
+    #[test]
+    fn test_real() {
+        let (p1, p2) = calculate(&parse(&REAL_DATA));
+        assert_eq!(p1, 242);
+        assert_eq!(p2, 2265549792);
+    }
 }

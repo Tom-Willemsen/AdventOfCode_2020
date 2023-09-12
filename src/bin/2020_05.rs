@@ -27,13 +27,7 @@ fn get_seat_id(seat: &str) -> u64 {
     id
 }
 
-fn main() {
-    let args = Cli::parse();
-
-    let raw_inp = fs::read_to_string(args.input).expect("can't open input file");
-
-    let data = parse(&raw_inp);
-
+fn calculate(data: &[&str]) -> (u64, u64) {
     let mut max_seat = u64::MIN;
     let mut min_seat = u64::MAX;
 
@@ -59,13 +53,39 @@ fn main() {
         }
     }
 
+    (p1, p2)
+}
+
+fn main() {
+    let args = Cli::parse();
+
+    let raw_inp = fs::read_to_string(args.input).expect("can't open input file");
+
+    let data = parse(&raw_inp);
+
+    let (p1, p2) = calculate(&data);
+
     println!("{}\n{}", p1, p2);
 }
 
-#[test]
-fn test_get_seat_id() {
-    assert_eq!(get_seat_id(&"FBFBBFFRLR"), 357);
-    assert_eq!(get_seat_id(&"BFFFBBFRRR"), 567);
-    assert_eq!(get_seat_id(&"FFFBBBFRRR"), 119);
-    assert_eq!(get_seat_id(&"BBFFBBFRLL"), 820);
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const REAL_DATA: &str = include_str!("../../inputs/real/2020_05");
+
+    #[test]
+    fn test_get_seat_id() {
+        assert_eq!(get_seat_id(&"FBFBBFFRLR"), 357);
+        assert_eq!(get_seat_id(&"BFFFBBFRRR"), 567);
+        assert_eq!(get_seat_id(&"FFFBBBFRRR"), 119);
+        assert_eq!(get_seat_id(&"BBFFBBFRLL"), 820);
+    }
+
+    #[test]
+    fn test_real() {
+        let (p1, p2) = calculate(&parse(REAL_DATA));
+        assert_eq!(p1, 890);
+        assert_eq!(p2, 651);
+    }
 }

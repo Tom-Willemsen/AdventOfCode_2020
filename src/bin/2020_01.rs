@@ -7,6 +7,14 @@ struct Cli {
     input: String,
 }
 
+fn parse(raw_inp: &str) -> Vec<i64> {
+    raw_inp
+        .trim()
+        .split('\n')
+        .map(|s| s.parse().unwrap())
+        .collect()
+}
+
 fn part1(nums: &Vec<i64>) -> i64 {
     for x in 0..nums.len() {
         for y in (x + 1)..nums.len() {
@@ -36,19 +44,34 @@ fn main() {
 
     let inp = fs::read_to_string(args.input).expect("can't open input file");
 
-    let nums: Vec<i64> = inp.trim().split('\n').map(|s| s.parse().unwrap()).collect();
-
+    let nums: Vec<i64> = parse(&inp);
     println!("{}\n{}", part1(&nums), part2(&nums));
 }
 
-#[test]
-fn test_p1_example() {
-    let nums = vec![1721, 979, 366, 299, 675, 1456];
-    assert_eq!(part1(&nums), 514579);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_p2_example() {
-    let nums = vec![1721, 979, 366, 299, 675, 1456];
-    assert_eq!(part2(&nums), 241861950);
+    const EXAMPLE_DATA: &str = include_str!("../../inputs/examples/2020_01");
+    const REAL_DATA: &str = include_str!("../../inputs/real/2020_01");
+
+    #[test]
+    fn test_p1_example() {
+        assert_eq!(part1(&parse(&EXAMPLE_DATA)), 514579);
+    }
+
+    #[test]
+    fn test_p2_example() {
+        assert_eq!(part2(&parse(&EXAMPLE_DATA)), 241861950);
+    }
+
+    #[test]
+    fn test_p1_real() {
+        assert_eq!(part1(&parse(&REAL_DATA)), 538464);
+    }
+
+    #[test]
+    fn test_p2_real() {
+        assert_eq!(part2(&parse(&REAL_DATA)), 278783190);
+    }
 }

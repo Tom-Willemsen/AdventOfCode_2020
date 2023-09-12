@@ -46,25 +46,24 @@ fn main() {
     println!("{}\n{}", p1, p2);
 }
 
-#[test]
-fn test_example() {
-    let example_data = "abc
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        a
-        b
-        c
+    const EXAMPLE_DATA: &str = include_str!("../../inputs/examples/2020_06");
+    const REAL_DATA: &str = include_str!("../../inputs/real/2020_06");
 
-        ab
-        ac
+    #[test]
+    fn test_example() {
+        let (p1, p2) = calculate(&parse(&EXAMPLE_DATA));
+        assert_eq!(p1, 11);
+        assert_eq!(p2, 6);
+    }
 
-        a
-        a
-        a
-        a
-
-        b";
-
-    let (p1, p2) = calculate(&parse(&example_data));
-    assert_eq!(p1, 11);
-    assert_eq!(p2, 6);
+    #[test]
+    fn test_real() {
+        let (p1, p2) = calculate(&parse(&REAL_DATA));
+        assert_eq!(p1, 6782);
+        assert_eq!(p2, 3596);
+    }
 }

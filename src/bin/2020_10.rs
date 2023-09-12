@@ -67,34 +67,47 @@ fn main() {
 }
 
 #[cfg(test)]
-const TEST_DATA_1: [u64; 11] = [16, 10, 15, 5, 1, 11, 7, 19, 6, 12, 4];
+mod tests {
+    use super::*;
 
-#[cfg(test)]
-const TEST_DATA_2: [u64; 31] = [
-    28, 33, 18, 42, 31, 14, 46, 20, 48, 47, 24, 23, 49, 45, 19, 38, 39, 11, 1, 32, 25, 35, 8, 17,
-    7, 9, 4, 2, 34, 10, 3,
-];
+    const TEST_DATA_1: [u64; 11] = [16, 10, 15, 5, 1, 11, 7, 19, 6, 12, 4];
+    const TEST_DATA_2: [u64; 31] = [
+        28, 33, 18, 42, 31, 14, 46, 20, 48, 47, 24, 23, 49, 45, 19, 38, 39, 11, 1, 32, 25, 35, 8,
+        17, 7, 9, 4, 2, 34, 10, 3,
+    ];
+    const REAL_DATA: &str = include_str!("../../inputs/real/2020_10");
 
-#[test]
-fn test_p1_examples() {
-    assert_eq!(
-        calculate_p1(&AHashSet::from_iter(TEST_DATA_1.into_iter())),
-        35
-    );
-    assert_eq!(
-        calculate_p1(&AHashSet::from_iter(TEST_DATA_2.into_iter())),
-        220
-    );
-}
+    #[test]
+    fn test_p1_examples() {
+        assert_eq!(
+            calculate_p1(&AHashSet::from_iter(TEST_DATA_1.into_iter())),
+            35
+        );
+        assert_eq!(
+            calculate_p1(&AHashSet::from_iter(TEST_DATA_2.into_iter())),
+            220
+        );
+    }
 
-#[test]
-fn test_p2_examples() {
-    assert_eq!(
-        calculate_p2(&AHashSet::from_iter(TEST_DATA_1.into_iter())),
-        8
-    );
-    assert_eq!(
-        calculate_p2(&AHashSet::from_iter(TEST_DATA_2.into_iter())),
-        19208
-    );
+    #[test]
+    fn test_p2_examples() {
+        assert_eq!(
+            calculate_p2(&AHashSet::from_iter(TEST_DATA_1.into_iter())),
+            8
+        );
+        assert_eq!(
+            calculate_p2(&AHashSet::from_iter(TEST_DATA_2.into_iter())),
+            19208
+        );
+    }
+
+    #[test]
+    fn test_p1_real() {
+        assert_eq!(calculate_p1(&parse(REAL_DATA)), 2240);
+    }
+
+    #[test]
+    fn test_p2_real() {
+        assert_eq!(calculate_p2(&parse(REAL_DATA)), 99214346656768);
+    }
 }
