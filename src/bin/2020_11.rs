@@ -1,6 +1,6 @@
 use clap::Parser;
-use std::fs;
 use ndarray::{Array2, Zip};
+use std::fs;
 
 #[derive(Parser)]
 struct Cli {
@@ -11,13 +11,8 @@ struct Cli {
 fn parse(raw_inp: &str) -> Array2<u8> {
     let rows = raw_inp.trim().split('\n').count();
     let columns = raw_inp.trim().split('\n').map(|x| x.len()).max().unwrap();
-    let v: Vec<u8> = raw_inp
-        .trim()
-        .split('\n')
-        .map(|x| x.bytes().into_iter())
-        .flatten()
-        .collect();
-        
+    let v: Vec<u8> = raw_inp.trim().split('\n').flat_map(|x| x.bytes()).collect();
+
     Array2::from_shape_vec([rows, columns], v).unwrap()
 }
 
@@ -46,72 +41,86 @@ fn validate_seat_offset(
     let new_x = x.checked_add_signed(x_offset)?;
     let new_y = y.checked_add_signed(y_offset)?;
 
-    if let Some(_) = data.get((new_y, new_x)) {
-        return Some((new_x, new_y));
+    if data.get((new_y, new_x)).is_some() {
+        return Some((new_y, new_x));
     }
     None
 }
 
-fn visible_occupied_seats_p1(data: &Array2<u8>, x: usize, y: usize) -> usize {
-    DIRECTIONS.iter()
+fn visible_occupied_seats_p1(data: &Array2<u8>, x: usize, y: usize) -> Vec<(usize, usize)> {
+    DIRECTIONS
+        .iter()
         .filter_map(|&(xd, yd)| validate_seat_offset(data, x, y, xd, yd))
-        .filter(|&(nx, ny)| data[(ny, nx)] == OCCUPIED)
-        .count()
+        .collect()
 }
 
-fn visible_occupied_seats_p2(data: &Array2<u8>, x: usize, y: usize) -> usize {
-    DIRECTIONS.iter()
-        .filter(|&(xd, yd)| {
+fn visible_occupied_seats_p2(data: &Array2<u8>, x: usize, y: usize) -> Vec<(usize, usize)> {
+    DIRECTIONS
+        .iter()
+        .filter_map(|&(xd, yd)| {
             let mut distance = 1;
-            while let Some((nx, ny)) = validate_seat_offset(data, x, y, xd * distance, yd * distance) {
+            while let Some((ny, nx)) =
+                validate_seat_offset(data, x, y, xd * distance, yd * distance)
+            {
                 if data[(ny, nx)] == FLOOR {
                     distance += 1;
                 } else {
-                    return data[(ny, nx)] == OCCUPIED;
+                    return Some((ny, nx));
                 }
             }
-            false
+            None
         })
-        .count()
+        .collect()
 }
 
-type VisibleSeatsType = fn(&Array2<u8>, usize, usize) -> usize;
+type VisibleSeatsType = fn(&Array2<u8>, usize, usize) -> Vec<(usize, usize)>;
 
 fn simulate(
     data: &Array2<u8>,
     visible_seats: VisibleSeatsType,
     occupancy_tolerance: usize,
 ) -> usize {
-    let mut old_data: Array2<u8>;
+    let mut old_data: Array2<u8> = data.clone();
     let mut new_data: Array2<u8> = data.clone();
-    let mut any_changed = true;
 
+    // Precompute visible seats
+    let vseats: Array2<Vec<(usize, usize)>> = Array2::from_shape_fn(data.raw_dim(), |(y, x)| {
+        if data[(y, x)] != FLOOR {
+            visible_seats(data, x, y)
+        } else {
+            vec![]
+        }
+    });
+
+    let mut any_changed = true;
     while any_changed {
-        any_changed = false;
-        
-        old_data = new_data.clone();
-        
-        old_data
-            .indexed_iter()
-            .filter(|(_, &old)| old != FLOOR)
-            .for_each(|((y, x), &old)| {
-                let visible_occupied = visible_seats(&old_data, x, y);
+        std::mem::swap(&mut old_data, &mut new_data);
+
+        Zip::from(&mut new_data)
+            .and(&old_data)
+            .and(&vseats)
+            .for_each(|new, &old, vseats| {
+                if old == FLOOR {
+                    return;
+                }
+                let visible_occupied = vseats
+                    .iter()
+                    .filter(|&&coord| old_data[coord] == OCCUPIED)
+                    .count();
+
                 if old == EMPTY && visible_occupied == 0 {
-                    any_changed = true;
-                    new_data[(y, x)] = OCCUPIED;
-                } else if old == OCCUPIED && visible_occupied >= occupancy_tolerance  {
-                    any_changed = true;
-                    new_data[(y, x)] = EMPTY;
+                    *new = OCCUPIED;
+                } else if old == OCCUPIED && visible_occupied >= occupancy_tolerance {
+                    *new = EMPTY;
                 } else {
-                    new_data[(y, x)] = old;
+                    *new = old;
                 }
             });
+
+        any_changed = old_data != new_data;
     }
 
-    new_data
-        .iter()
-        .filter(|&s| s == &OCCUPIED)
-        .count()
+    new_data.iter().filter(|&s| s == &OCCUPIED).count()
 }
 
 fn calculate_p1(data: &Array2<u8>) -> usize {
