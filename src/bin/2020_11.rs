@@ -1,6 +1,7 @@
 use clap::Parser;
 use ndarray::{Array2, Zip};
 use std::fs;
+use rayon::prelude::*;
 
 #[derive(Parser)]
 struct Cli {
@@ -17,11 +18,11 @@ fn parse(raw_inp: &str) -> Array2<u8> {
 }
 
 const DIRECTIONS: [(isize, isize); 8] = [
+    (-1, 0),
+    (1, 0),
     (-1, -1),
     (0, -1),
     (1, -1),
-    (-1, 0),
-    (1, 0),
     (-1, 1),
     (0, 1),
     (1, 1),
@@ -59,13 +60,13 @@ fn visible_occupied_seats_p2(data: &Array2<u8>, x: usize, y: usize) -> Vec<(usiz
         .iter()
         .filter_map(|&(xd, yd)| {
             let mut distance = 1;
-            while let Some((ny, nx)) =
+            while let Some(coord) =
                 validate_seat_offset(data, x, y, xd * distance, yd * distance)
             {
-                if data[(ny, nx)] == FLOOR {
+                if data[coord] == FLOOR {
                     distance += 1;
                 } else {
-                    return Some((ny, nx));
+                    return Some(coord);
                 }
             }
             None
@@ -88,7 +89,7 @@ fn simulate(
         if data[(y, x)] != FLOOR {
             visible_seats(data, x, y)
         } else {
-            vec![]
+            Vec::with_capacity(0)
         }
     });
 
@@ -138,8 +139,12 @@ fn main() {
     let args = Cli::parse();
     let raw_inp = fs::read_to_string(args.input).expect("can't open input file");
     let data = parse(&raw_inp);
-    let p1 = calculate_p1(&data);
-    let p2 = calculate_p2(&data);
+    let results: Vec<usize> = vec![calculate_p1, calculate_p2]
+        .par_iter()
+        .map(|f| f(&data))
+        .collect();
+    let p1 = results[0];
+    let p2 = results[1];
     println!("{}\n{}", p1, p2);
 }
 
