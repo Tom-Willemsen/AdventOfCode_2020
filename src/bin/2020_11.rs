@@ -100,20 +100,23 @@ fn simulate(
             .and(&old_data)
             .and(&vseats)
             .for_each(|new, &old, vseats| {
-                if old == FLOOR {
-                    return;
-                }
-                let visible_occupied = vseats
-                    .iter()
-                    .filter(|&&coord| old_data[coord] == OCCUPIED)
-                    .count();
-
-                if old == EMPTY && visible_occupied == 0 {
-                    *new = OCCUPIED;
-                } else if old == OCCUPIED && visible_occupied >= occupancy_tolerance {
-                    *new = EMPTY;
-                } else {
-                    *new = old;
+                if old != FLOOR {
+                    *new = match old {
+                        EMPTY => {
+                            let no_visible_occupied = vseats
+                                .iter()
+                                .all(|&coord| old_data[coord] != OCCUPIED);
+                            if no_visible_occupied { OCCUPIED } else { EMPTY }
+                        },
+                        OCCUPIED => {
+                            let many_visible_occupied = vseats
+                                .iter()
+                                .filter(|&&coord| old_data[coord] == OCCUPIED)
+                                .count() >= occupancy_tolerance;
+                            if many_visible_occupied { EMPTY } else { OCCUPIED }
+                        },
+                        _ => old,
+                    }
                 }
             });
 
