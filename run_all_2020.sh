@@ -1,6 +1,4 @@
 set -e
-cargo test
-cargo build --release
 
 HYPERFINE_RUN_ARGS="--warmup=10 --runs 100"
 
