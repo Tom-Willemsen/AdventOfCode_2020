@@ -1,7 +1,7 @@
 use clap::Parser;
 use ndarray::{Array2, Zip};
-use std::fs;
 use rayon::prelude::*;
+use std::fs;
 
 #[derive(Parser)]
 struct Cli {
@@ -60,9 +60,7 @@ fn visible_occupied_seats_p2(data: &Array2<u8>, x: usize, y: usize) -> Vec<(usiz
         .iter()
         .filter_map(|&(xd, yd)| {
             let mut distance = 1;
-            while let Some(coord) =
-                validate_seat_offset(data, x, y, xd * distance, yd * distance)
-            {
+            while let Some(coord) = validate_seat_offset(data, x, y, xd * distance, yd * distance) {
                 if data[coord] == FLOOR {
                     distance += 1;
                 } else {
@@ -104,18 +102,26 @@ fn simulate(
                 if old != FLOOR {
                     *new = match old {
                         EMPTY => {
-                            let no_visible_occupied = vseats
-                                .iter()
-                                .all(|&coord| old_data[coord] != OCCUPIED);
-                            if no_visible_occupied { OCCUPIED } else { EMPTY }
-                        },
+                            let no_visible_occupied =
+                                vseats.iter().all(|&coord| old_data[coord] != OCCUPIED);
+                            if no_visible_occupied {
+                                OCCUPIED
+                            } else {
+                                EMPTY
+                            }
+                        }
                         OCCUPIED => {
                             let many_visible_occupied = vseats
                                 .iter()
                                 .filter(|&&coord| old_data[coord] == OCCUPIED)
-                                .count() >= occupancy_tolerance;
-                            if many_visible_occupied { EMPTY } else { OCCUPIED }
-                        },
+                                .count()
+                                >= occupancy_tolerance;
+                            if many_visible_occupied {
+                                EMPTY
+                            } else {
+                                OCCUPIED
+                            }
+                        }
                         _ => old,
                     }
                 }
