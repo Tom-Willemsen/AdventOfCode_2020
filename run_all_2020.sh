@@ -1,17 +1,19 @@
 set -e
 
-HYPERFINE_RUN_ARGS="--warmup=10 --runs 100"
+HYPERFINE_RUN_ARGS="--warmup=10 --runs 20"
 
 for i in $(seq -w 1 25) 
 do 
     if test -f "./target/release/2020_$i"; then
+        CMD="./target/release/2020_$i --input inputs/real/2020_$i"
         echo ""
         echo "2020 Day $i"
-        ./target/release/2020_$i --input inputs/real/2020_$i
+        $CMD
         echo ""
         # Main benchmarking
-        hyperfine $HYPERFINE_RUN_ARGS -N -u millisecond --style basic "./target/release/2020_$i --input inputs/real/2020_$i" 2>/dev/null
+        hyperfine $HYPERFINE_RUN_ARGS -N -u millisecond --style basic "$CMD" 2>/dev/null
         # CPU energy usage benchmark
-        perf stat -e power/energy-pkg/ -- ./target/release/2020_$i --input inputs/real/2020_$i 2>&1 >/dev/null | grep -F "Joules"
+        CPU_JOULES=$(perf stat -e power/energy-pkg/ -- $CMD 2>&1 >/dev/null | grep -oE "[0-9\.]+ Joules power/energy-pkg/" | cut -d ' ' -f 1)
+        echo "CPU Joules: $CPU_JOULES J"
     fi
 done;
