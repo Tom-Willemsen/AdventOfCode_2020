@@ -121,13 +121,7 @@ fn calculate_p2(rules: &[ValidityRules], my_ticket: &[u64], other_tickets: &[Vec
                 let key = possible_assignments[field][0];
                 let new_assignments = possible_assignments
                     .iter()
-                    .map(|assignments| {
-                        assignments
-                            .iter()
-                            .filter(|&x| x != &key)
-                            .copied()
-                            .collect()
-                    })
+                    .map(|assignments| assignments.iter().filter(|&x| x != &key).copied().collect())
                     .collect::<Vec<Vec<_>>>();
 
                 assignments.insert(key, field);
