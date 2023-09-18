@@ -8,7 +8,7 @@ struct Cli {
     input: String,
 }
 
-fn parse(raw_inp: &str) -> Vec<usize> {
+fn parse(raw_inp: &str) -> Vec<u32> {
     raw_inp
         .lines()
         .next()
@@ -18,29 +18,29 @@ fn parse(raw_inp: &str) -> Vec<usize> {
         .collect::<Vec<_>>()
 }
 
-fn simulate(data: &[usize], turns: usize) -> usize {
+fn simulate(data: &[u32], turns: u32) -> u32 {
     // Lower 1/4 of numbers -> dense -> store in array cache
     // Remaining numbers -> relatively sparse -> hashmap
-    let small: usize = turns / 4;
-    let mut last: usize = data[data.len() - 1];
+    let small: u32 = turns / 4;
+    let mut last: u32 = data[data.len() - 1];
 
-    let mut small_spoken = vec![usize::MAX; small];
-    let mut large_spoken: AHashMap<usize, usize> = AHashMap::default();
+    let mut small_spoken = vec![u32::MAX; small as usize];
+    let mut large_spoken: AHashMap<u32, u32> = AHashMap::default();
 
-    data.iter().enumerate().for_each(|(idx, &n)| {
+    data.iter().zip(0..).for_each(|(&n, idx)| {
         if n < small {
-            small_spoken[n] = idx;
+            small_spoken[n as usize] = idx;
         } else {
             large_spoken.insert(n, idx);
         }
     });
 
-    for turn in data.len()..turns {
+    for turn in data.len() as u32..turns {
         let old;
 
         if last < small {
-            old = Some(small_spoken[last]);
-            small_spoken[last] = turn - 1;
+            old = Some(small_spoken[last as usize]);
+            small_spoken[last as usize] = turn - 1;
         } else {
             old = large_spoken.insert(last, turn - 1);
         }
@@ -54,11 +54,11 @@ fn simulate(data: &[usize], turns: usize) -> usize {
     last
 }
 
-fn calculate_p1(data: &[usize]) -> usize {
+fn calculate_p1(data: &[u32]) -> u32 {
     simulate(data, 2020)
 }
 
-fn calculate_p2(data: &[usize]) -> usize {
+fn calculate_p2(data: &[u32]) -> u32 {
     simulate(data, 30000000)
 }
 
