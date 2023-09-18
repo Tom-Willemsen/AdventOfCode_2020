@@ -1,4 +1,4 @@
-use ahash::AHashSet;
+use ahash::{AHashSet, AHashMap};
 use clap::Parser;
 use std::fs;
 
@@ -8,8 +8,8 @@ struct Cli {
     input: String,
 }
 
-fn parse(raw_inp: &str) -> AHashSet<(i64, i64)> {
-    let mut data: AHashSet<(i64, i64)> = AHashSet::default();
+fn parse(raw_inp: &str) -> AHashSet<(i32, i32)> {
+    let mut data: AHashSet<(i32, i32)> = AHashSet::default();
     raw_inp
         .trim()
         .split('\n')
@@ -20,109 +20,100 @@ fn parse(raw_inp: &str) -> AHashSet<(i64, i64)> {
                 .enumerate()
                 .filter(|&(_, &byte)| byte == b'#')
                 .for_each(|(column, _)| {
-                    data.insert((column as i64, row as i64));
+                    data.insert((column as i32, row as i32));
                 });
         });
 
     data
 }
 
-fn count_active_neighbours_p1(frame: &AHashSet<(i64, i64, i64)>, x: i64, y: i64, z: i64) -> usize {
-    let mut count = 0;
-    for xd in -1..=1 {
-        for yd in -1..=1 {
-            for zd in -1..=1 {
-                if !(xd == 0 && yd == 0 && zd == 0) && frame.contains(&(x + xd, y + yd, z + zd)) {
-                    count += 1;
+type Point3 = (i32, i32, i32);
+type Point4 = (i32, i32, i32, i32);
+type PointSet3 = AHashSet<Point3>;
+type PointSet4 = AHashSet<Point4>;
 
-                    if count > 3 {
-                        return count;
-                    }
-                }
-            }
-        }
-    }
-    count
-}
+fn build_p1_activity_map(frame: &PointSet3) -> AHashMap<Point3, usize> {
+    let mut activity_map: AHashMap<Point3, usize> = AHashMap::with_capacity(frame.len() * 40);
 
-fn count_active_neighbours_p2(
-    frame: &AHashSet<(i64, i64, i64, i64)>,
-    x: i64,
-    y: i64,
-    z: i64,
-    w: i64,
-) -> usize {
-    let mut count = 0;
-    for xd in -1..=1 {
-        for yd in -1..=1 {
-            for zd in -1..=1 {
-                for wd in -1..=1 {
-                    if !(xd == 0 && yd == 0 && zd == 0 && wd == 0)
-                        && frame.contains(&(x + xd, y + yd, z + zd, w + wd))
-                    {
-                        count += 1;
-
-                        if count > 3 {
-                            return count;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    count
-}
-
-fn turn_part1(current: &AHashSet<(i64, i64, i64)>) -> AHashSet<(i64, i64, i64)> {
-    let mut next_frame: AHashSet<(i64, i64, i64)> = AHashSet::default();
-
-    for (x, y, z) in current {
+    for &(x, y, z) in frame {
         for xd in -1..=1 {
             for yd in -1..=1 {
                 for zd in -1..=1 {
-                    next_frame.insert((x + xd, y + yd, z + zd));
+                    if xd == 0 && yd == 0 && zd == 0 {
+                        continue;
+                    }
+                    
+                    let inc = if zd == -1 && z == 1 {
+                        2
+                    } else {
+                        1
+                    };
+                    
+                    *activity_map.entry((x+xd, y+yd, z+zd)).or_insert(0) += inc;
                 }
             }
         }
     }
-
-    next_frame.retain(|&(x, y, z)| {
-        let active_neighbours = count_active_neighbours_p1(current, x, y, z);
-        let currently_active = current.contains(&(x, y, z));
-
-        (active_neighbours == 3) || (currently_active && active_neighbours == 2)
-    });
-
-    next_frame
+    
+    activity_map
 }
 
-fn turn_part2(current: &AHashSet<(i64, i64, i64, i64)>) -> AHashSet<(i64, i64, i64, i64)> {
-    let mut next_frame: AHashSet<(i64, i64, i64, i64)> = AHashSet::default();
+fn build_p2_activity_map(frame: &PointSet4) -> AHashMap<Point4, usize> {
+    let mut activity_map: AHashMap<Point4, usize> = AHashMap::with_capacity(frame.len() * 40);
 
-    for (x, y, z, w) in current {
+    for &(x, y, z, w) in frame {
         for xd in -1..=1 {
             for yd in -1..=1 {
                 for zd in -1..=1 {
                     for wd in -1..=1 {
-                        next_frame.insert((x + xd, y + yd, z + zd, w + wd));
+                        if xd == 0 && yd == 0 && zd == 0 && wd == 0 {
+                            continue;
+                        }
+                        
+                        let inc = if (wd == -1 && w == 1) && (zd == -1 && z == 1) {
+                            4
+                        } else if (wd == -1 && w == 1) || (zd == -1 && z == 1) {
+                            2
+                        } else {
+                            1
+                        };
+                        
+                        *activity_map.entry((x+xd, y+yd, z+zd, w+wd)).or_insert(0) += inc;
                     }
                 }
             }
         }
     }
-
-    next_frame.retain(|&(x, y, z, w)| {
-        let active_neighbours = count_active_neighbours_p2(current, x, y, z, w);
-        let currently_active = current.contains(&(x, y, z, w));
-
-        (active_neighbours == 3) || (currently_active && active_neighbours == 2)
-    });
-
-    next_frame
+    
+    activity_map
 }
 
-fn calculate_p1(data: &AHashSet<(i64, i64)>) -> usize {
-    let mut current_frame: AHashSet<(i64, i64, i64)> = AHashSet::default();
+fn turn_part1(current: &PointSet3) -> PointSet3 {
+    build_p1_activity_map(current).into_iter()
+        .filter(|&((_, _, z), _)| {
+            z >= 0
+        })
+        .filter(|&(k, v)| {
+            v == 3 || (v==2 && current.contains(&k))
+        })
+        .map(|(k, _)| k)
+        .collect()
+}
+
+fn turn_part2(current: &PointSet4) -> PointSet4 {
+    build_p2_activity_map(current).into_iter()
+        .filter(|&((_, _, z, w), _)| {
+            z >= 0 && w >= 0
+        })
+        .filter(|&(k, v)| {
+            v == 3 || (v==2 && current.contains(&k))
+        })
+        .map(|(k, _)| k)
+        .collect()
+}
+
+fn calculate_p1(data: &AHashSet<(i32, i32)>) -> usize {
+    let mut current_frame: PointSet3 = AHashSet::with_capacity(data.len());
 
     for (x, y) in data {
         current_frame.insert((*x, *y, 0));
@@ -132,11 +123,14 @@ fn calculate_p1(data: &AHashSet<(i64, i64)>) -> usize {
         current_frame = turn_part1(&current_frame);
     }
 
-    current_frame.len()
+    current_frame
+        .into_iter()
+        .map(|(_, _, z)| if z == 0 { 1 } else { 2 })
+        .sum()
 }
 
-fn calculate_p2(data: &AHashSet<(i64, i64)>) -> usize {
-    let mut current_frame: AHashSet<(i64, i64, i64, i64)> = AHashSet::default();
+fn calculate_p2(data: &AHashSet<(i32, i32)>) -> usize {
+    let mut current_frame: PointSet4 = AHashSet::with_capacity(data.len());
 
     for (x, y) in data {
         current_frame.insert((*x, *y, 0, 0));
@@ -146,7 +140,18 @@ fn calculate_p2(data: &AHashSet<(i64, i64)>) -> usize {
         current_frame = turn_part2(&current_frame);
     }
 
-    current_frame.len()
+    current_frame
+        .into_iter()
+        .map(|(_, _, z, w)| {
+            if z == 0 && w == 0 {
+                1
+            } else if z == 0 || w == 0 {
+                2
+            } else {
+                4
+            }
+        })
+        .sum()
 }
 
 fn main() {
