@@ -6,8 +6,6 @@ edition = "2021"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 ahash = { version = "0.8" }
-fnv = { version = "1" }
-sscanf = { version = "0.4" }
 rayon = { version = "1" }
 ndarray = { version = "0.15", features = ["rayon", "blas", "matrixmultiply-threading"] }
 num = { version = "0.4" }
