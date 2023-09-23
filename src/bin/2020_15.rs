@@ -18,12 +18,7 @@ fn parse(raw_inp: &str) -> Vec<u32> {
         .collect::<Vec<_>>()
 }
 
-fn simulate<const TURNS: u32>(data: &[u32]) -> u32 {
-    // Lower 1/4 of numbers -> dense -> store in array cache
-    // Remaining numbers -> relatively sparse -> hashmap
-    let small: u32 = TURNS / 4;
-    let mut last: u32 = data[data.len() - 1];
-
+fn populate_initial_state(data: &[u32], small: u32) -> (Vec<u32>, AHashMap<u32, u32>) {
     let mut small_spoken = vec![u32::MAX; small as usize];
     let mut large_spoken: AHashMap<u32, u32> = AHashMap::default();
 
@@ -34,6 +29,17 @@ fn simulate<const TURNS: u32>(data: &[u32]) -> u32 {
             large_spoken.insert(n, idx);
         }
     });
+
+    (small_spoken, large_spoken)
+}
+
+fn simulate<const TURNS: u32>(data: &[u32]) -> u32 {
+    // Lower 1/4 of numbers -> dense -> store in array cache
+    // Remaining numbers -> relatively sparse -> hashmap
+    let small: u32 = TURNS / 4;
+    let mut last: u32 = data[data.len() - 1];
+
+    let (mut small_spoken, mut large_spoken) = populate_initial_state(data, small);
 
     for turn in data.len() as u32..TURNS {
         let old;
