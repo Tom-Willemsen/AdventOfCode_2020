@@ -18,10 +18,10 @@ fn parse(raw_inp: &str) -> Vec<u32> {
         .collect::<Vec<_>>()
 }
 
-fn simulate(data: &[u32], turns: u32) -> u32 {
+fn simulate<const TURNS: u32>(data: &[u32]) -> u32 {
     // Lower 1/4 of numbers -> dense -> store in array cache
     // Remaining numbers -> relatively sparse -> hashmap
-    let small: u32 = turns / 4;
+    let small: u32 = TURNS / 4;
     let mut last: u32 = data[data.len() - 1];
 
     let mut small_spoken = vec![u32::MAX; small as usize];
@@ -35,31 +35,28 @@ fn simulate(data: &[u32], turns: u32) -> u32 {
         }
     });
 
-    for turn in data.len() as u32..turns {
+    for turn in data.len() as u32..TURNS {
         let old;
 
         if last < small {
-            old = Some(small_spoken[last as usize]);
+            old = small_spoken[last as usize];
             small_spoken[last as usize] = turn - 1;
         } else {
-            old = large_spoken.insert(last, turn - 1);
+            old = large_spoken.insert(last, turn - 1).unwrap_or(u32::MAX);
         }
 
-        last = match old {
-            Some(prev_turn) => (turn - 1).saturating_sub(prev_turn),
-            None => 0,
-        }
+        last = (turn - 1).saturating_sub(old);
     }
 
     last
 }
 
 fn calculate_p1(data: &[u32]) -> u32 {
-    simulate(data, 2020)
+    simulate::<2020>(data)
 }
 
 fn calculate_p2(data: &[u32]) -> u32 {
-    simulate(data, 30000000)
+    simulate::<30000000>(data)
 }
 
 fn main() {

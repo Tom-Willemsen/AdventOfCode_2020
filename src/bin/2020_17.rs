@@ -1,4 +1,4 @@
-use ahash::{AHashSet, AHashMap};
+use ahash::{AHashMap, AHashSet};
 use clap::Parser;
 use std::fs;
 
@@ -42,19 +42,15 @@ fn build_p1_activity_map(frame: &PointSet3) -> AHashMap<Point3, usize> {
                     if xd == 0 && yd == 0 && zd == 0 {
                         continue;
                     }
-                    
-                    let inc = if zd == -1 && z == 1 {
-                        2
-                    } else {
-                        1
-                    };
-                    
-                    *activity_map.entry((x+xd, y+yd, z+zd)).or_insert(0) += inc;
+
+                    let inc = if zd == -1 && z == 1 { 2 } else { 1 };
+
+                    *activity_map.entry((x + xd, y + yd, z + zd)).or_insert(0) += inc;
                 }
             }
         }
     }
-    
+
     activity_map
 }
 
@@ -69,7 +65,7 @@ fn build_p2_activity_map(frame: &PointSet4) -> AHashMap<Point4, usize> {
                         if xd == 0 && yd == 0 && zd == 0 && wd == 0 {
                             continue;
                         }
-                        
+
                         let inc = if (wd == -1 && w == 1) && (zd == -1 && z == 1) {
                             4
                         } else if (wd == -1 && w == 1) || (zd == -1 && z == 1) {
@@ -77,37 +73,33 @@ fn build_p2_activity_map(frame: &PointSet4) -> AHashMap<Point4, usize> {
                         } else {
                             1
                         };
-                        
-                        *activity_map.entry((x+xd, y+yd, z+zd, w+wd)).or_insert(0) += inc;
+
+                        *activity_map
+                            .entry((x + xd, y + yd, z + zd, w + wd))
+                            .or_insert(0) += inc;
                     }
                 }
             }
         }
     }
-    
+
     activity_map
 }
 
 fn turn_part1(current: &PointSet3) -> PointSet3 {
-    build_p1_activity_map(current).into_iter()
-        .filter(|&((_, _, z), _)| {
-            z >= 0
-        })
-        .filter(|&(k, v)| {
-            v == 3 || (v==2 && current.contains(&k))
-        })
+    build_p1_activity_map(current)
+        .into_iter()
+        .filter(|&((_, _, z), _)| z >= 0)
+        .filter(|&(k, v)| v == 3 || (v == 2 && current.contains(&k)))
         .map(|(k, _)| k)
         .collect()
 }
 
 fn turn_part2(current: &PointSet4) -> PointSet4 {
-    build_p2_activity_map(current).into_iter()
-        .filter(|&((_, _, z, w), _)| {
-            z >= 0 && w >= 0
-        })
-        .filter(|&(k, v)| {
-            v == 3 || (v==2 && current.contains(&k))
-        })
+    build_p2_activity_map(current)
+        .into_iter()
+        .filter(|&((_, _, z, w), _)| z >= 0 && w >= 0)
+        .filter(|&(k, v)| v == 3 || (v == 2 && current.contains(&k)))
         .map(|(k, _)| k)
         .collect()
 }

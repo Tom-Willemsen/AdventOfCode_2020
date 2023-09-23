@@ -1,6 +1,6 @@
 set -e
 
-HYPERFINE_RUN_ARGS="--warmup=5 --runs 10"
+HYPERFINE_RUN_ARGS="--warmup=5 --runs 20"
 
 for i in $(seq -w 1 25) 
 do 
