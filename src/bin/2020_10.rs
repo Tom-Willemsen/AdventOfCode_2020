@@ -36,8 +36,8 @@ fn calculate_p1(data: &AHashSet<u64>) -> u64 {
     increases[0] * (increases[2] + 1)
 }
 
-fn calculate_p2(data: &AHashSet<u64>) -> usize {
-    let mut ways: AHashMap<u64, usize> = AHashMap::default();
+fn calculate_p2(data: &AHashSet<u64>) -> u64 {
+    let mut ways: AHashMap<u64, u64> = AHashMap::default();
     ways.insert(0, 1);
 
     let max_joltage: u64 = *data.iter().max().expect("no data");
