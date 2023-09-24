@@ -9,6 +9,7 @@ ahash = { version = "0.8" }
 rayon = { version = "1" }
 ndarray = { version = "0.15", features = ["rayon"] }
 modinverse = { version = "0.1" }
+bitvec = { version = "1.0" }
 
 [profile.release]
 codegen-units = 1

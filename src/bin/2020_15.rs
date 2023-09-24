@@ -1,4 +1,4 @@
-use ahash::AHashMap;
+use bitvec::prelude::*;
 use clap::Parser;
 use std::fs;
 
@@ -18,40 +18,34 @@ fn parse(raw_inp: &str) -> Vec<u32> {
         .collect::<Vec<_>>()
 }
 
-fn populate_initial_state(data: &[u32], small: u32) -> (Vec<u32>, AHashMap<u32, u32>) {
-    let mut small_spoken = vec![u32::MAX; small as usize];
-    let mut large_spoken: AHashMap<u32, u32> = AHashMap::default();
+fn populate_initial_state(data: &[u32], turns: u32) -> (Vec<u32>, BitVec<u32, Lsb0>) {
+    let mut spoken = vec![0; turns as usize];
+    let mut existence_sieve = bitvec![u32, Lsb0; 0; turns as usize];
 
     data.iter().zip(0..).for_each(|(&n, idx)| {
-        if n < small {
-            small_spoken[n as usize] = idx;
-        } else {
-            large_spoken.insert(n, idx);
-        }
+        spoken[n as usize] = idx;
+        existence_sieve.set(n as usize, true);
     });
 
-    (small_spoken, large_spoken)
+    (spoken, existence_sieve)
 }
 
 fn simulate<const TURNS: u32>(data: &[u32]) -> u32 {
-    // Lower 1/4 of numbers -> dense -> store in array cache
-    // Remaining numbers -> relatively sparse -> hashmap
-    let small: u32 = TURNS / 4;
     let mut last: u32 = data[data.len() - 1];
 
-    let (mut small_spoken, mut large_spoken) = populate_initial_state(data, small);
+    let (mut spoken, mut existence_sieve) = populate_initial_state(data, TURNS);
 
-    for turn in data.len() as u32..TURNS {
-        let old;
-
-        if last < small {
-            old = small_spoken[last as usize];
-            small_spoken[last as usize] = turn - 1;
+    let start_turn: u32 = data.len().try_into().expect("num turns exceeded u32 range");
+    for turn in start_turn..TURNS {
+        let next = if existence_sieve[last as usize] {
+            turn - 1 - spoken[last as usize]
         } else {
-            old = large_spoken.insert(last, turn - 1).unwrap_or(u32::MAX);
-        }
+            existence_sieve.set(last as usize, true);
+            0
+        };
+        spoken[last as usize] = turn - 1;
 
-        last = (turn - 1).saturating_sub(old);
+        last = next;
     }
 
     last
