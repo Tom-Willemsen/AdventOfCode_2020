@@ -1,6 +1,6 @@
 use ahash::{AHashMap, AHashSet};
 use clap::Parser;
-use ndarray::{s, Array2};
+use ndarray::{s, ArcArray, Array2, ArrayView2, Ix2, Zip};
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -13,8 +13,8 @@ struct Cli {
 
 #[derive(Debug, Clone)]
 struct Tile {
-    id: i64,
-    arr: Array2<bool>,
+    id: u64,
+    arr: ArcArray<bool, Ix2>,
 }
 
 impl Tile {
@@ -23,7 +23,7 @@ impl Tile {
         new_arr.swap_axes(0, 1);
         Tile {
             id: self.id,
-            arr: new_arr.into_owned(),
+            arr: new_arr.to_owned().into_shared(),
         }
     }
 
@@ -31,15 +31,7 @@ impl Tile {
         let new_arr = self.arr.slice(s![..;-1,..]);
         Tile {
             id: self.id,
-            arr: new_arr.into_owned(),
-        }
-    }
-
-    fn clone_flip_horizontal(&self) -> Self {
-        let new_arr = self.arr.slice(s![..,..;-1]);
-        Tile {
-            id: self.id,
-            arr: new_arr.into_owned(),
+            arr: new_arr.to_owned().into_shared(),
         }
     }
 }
@@ -86,7 +78,10 @@ impl FromStr for Tile {
 
         let arr = Array2::from_shape_vec([rows, columns], v).or(Err("shape error"))?;
 
-        Ok(Tile { id, arr })
+        Ok(Tile {
+            id,
+            arr: arr.into_shared(),
+        })
     }
 }
 
@@ -109,11 +104,10 @@ fn get_candidate_placements(
         for (x_diff, y_diff) in NEIGHBOURS {
             let new_x = x + x_diff;
             let new_y = y + y_diff;
-            if !existing_placements.contains_key(&(new_x, new_y)) {
-                candidates.insert((new_x, new_y));
-            }
+            candidates.insert((new_x, new_y));
         }
     }
+    candidates.retain(|elem| !existing_placements.contains_key(elem));
     candidates
 }
 
@@ -124,13 +118,13 @@ fn is_possible_placement(
 ) -> bool {
     let (prop_x, prop_y) = proposed_location;
 
-    if let Some(tile_above) = existing_placements.get(&(prop_x, prop_y + 1)) {
+    if let Some(tile_above) = existing_placements.get(&(prop_x, prop_y - 1)) {
         if tile_above.arr.slice(s![-1, ..]) != tile.arr.slice(s![0, ..]) {
             return false;
         }
     }
 
-    if let Some(tile_below) = existing_placements.get(&(prop_x, prop_y - 1)) {
+    if let Some(tile_below) = existing_placements.get(&(prop_x, prop_y + 1)) {
         if tile_below.arr.slice(s![0, ..]) != tile.arr.slice(s![-1, ..]) {
             return false;
         }
@@ -152,109 +146,210 @@ fn is_possible_placement(
 }
 
 fn is_any_placement_possible(
-    assigned_tiles: &AHashMap<(i64, i64), Tile>,
+    layout: &AHashMap<(i64, i64), Tile>,
     proposed_location: (i64, i64),
     tile: &Tile,
 ) -> Option<Tile> {
-    let untransformed_tile = tile.clone();
-    if is_possible_placement(assigned_tiles, proposed_location, &untransformed_tile) {
-        return Some(untransformed_tile);
+    if is_possible_placement(layout, proposed_location, tile) {
+        return Some(tile.clone());
     }
 
     let rotated_tile = tile.clone_rotate();
-    if is_possible_placement(assigned_tiles, proposed_location, &rotated_tile) {
+    if is_possible_placement(layout, proposed_location, &rotated_tile) {
         return Some(rotated_tile);
     }
 
-    let vert_flipped_tile = tile.clone_flip_vertical();
-    if is_possible_placement(assigned_tiles, proposed_location, &vert_flipped_tile) {
-        return Some(vert_flipped_tile);
-    }
-
-    let horiz_flipped_tile = tile.clone_flip_horizontal();
-    if is_possible_placement(assigned_tiles, proposed_location, &horiz_flipped_tile) {
-        return Some(horiz_flipped_tile);
-    }
-
-    let all_flipped_tile = vert_flipped_tile.clone_flip_horizontal();
-    if is_possible_placement(assigned_tiles, proposed_location, &all_flipped_tile) {
-        return Some(all_flipped_tile);
-    }
-
-    let rotated_hflip_tile = rotated_tile.clone_flip_horizontal();
-    if is_possible_placement(assigned_tiles, proposed_location, &rotated_hflip_tile) {
-        return Some(rotated_hflip_tile);
-    }
-
-    let rotated_vflip_tile = rotated_tile.clone_flip_vertical();
-    if is_possible_placement(assigned_tiles, proposed_location, &rotated_vflip_tile) {
-        return Some(rotated_vflip_tile);
-    }
-
     let double_rotated_tile = rotated_tile.clone_rotate();
-    if is_possible_placement(assigned_tiles, proposed_location, &double_rotated_tile) {
+    if is_possible_placement(layout, proposed_location, &double_rotated_tile) {
         return Some(double_rotated_tile);
     }
 
     let triple_rotated_tile = double_rotated_tile.clone_rotate();
-    if is_possible_placement(assigned_tiles, proposed_location, &triple_rotated_tile) {
+    if is_possible_placement(layout, proposed_location, &triple_rotated_tile) {
         return Some(triple_rotated_tile);
+    }
+
+    let flipped_tile = tile.clone_flip_vertical();
+    if is_possible_placement(layout, proposed_location, &flipped_tile) {
+        return Some(flipped_tile);
+    }
+
+    let flipped_rotated_tile = flipped_tile.clone_rotate();
+    if is_possible_placement(layout, proposed_location, &flipped_rotated_tile) {
+        return Some(flipped_rotated_tile);
+    }
+
+    let flipped_double_rotated_tile = flipped_rotated_tile.clone_rotate();
+    if is_possible_placement(layout, proposed_location, &flipped_double_rotated_tile) {
+        return Some(flipped_double_rotated_tile);
+    }
+
+    let flipped_triple_rotated_tile = flipped_double_rotated_tile.clone_rotate();
+    if is_possible_placement(layout, proposed_location, &flipped_triple_rotated_tile) {
+        return Some(flipped_triple_rotated_tile);
     }
 
     None
 }
 
-fn build_image(data: &[Tile]) -> AHashMap<(i64, i64), Tile> {
-    let mut assigned_tiles: AHashMap<(i64, i64), Tile> = AHashMap::default();
-    let mut unassigned_tiles: AHashSet<Tile> = AHashSet::default();
+fn build_layout(data: &[Tile]) -> AHashMap<(i64, i64), Tile> {
+    let mut layout: AHashMap<(i64, i64), Tile> = AHashMap::default();
+    let mut unassigned: AHashSet<Tile> = AHashSet::default();
 
-    assigned_tiles.insert((0, 0), data[0].clone());
+    layout.insert((0, 0), data[0].clone());
 
     data.iter().skip(1).for_each(|tile| {
-        unassigned_tiles.insert(tile.clone());
+        unassigned.insert(tile.clone());
     });
 
-    while unassigned_tiles.len() > 0 {
-        let candidate_placements = get_candidate_placements(&assigned_tiles);
+    while unassigned.len() > 0 {
+        let candidate_placements = get_candidate_placements(&layout);
         for candidate_placement in candidate_placements {
-            for tile in unassigned_tiles.iter() {
-                if let Some(ok_tile) =
-                    is_any_placement_possible(&assigned_tiles, candidate_placement, tile)
+            let mut placed = false;
+            for tile in unassigned.iter() {
+                if let Some(ok_tile) = is_any_placement_possible(&layout, candidate_placement, tile)
                 {
-                    assigned_tiles.insert(candidate_placement, ok_tile);
+                    layout.insert(candidate_placement, ok_tile);
+                    placed = true;
                     break;
                 }
             }
 
-            unassigned_tiles.retain(|elem| assigned_tiles.values().all(|e| e != elem));
+            if placed {
+                unassigned.retain(|elem| layout.values().all(|e| e != elem));
+                break;
+            }
         }
     }
-    assigned_tiles
+    layout
 }
 
-fn calculate_p1(image: &AHashMap<(i64, i64), Tile>) -> i64 {
-    let max_x: i64 = image.keys().map(|&(x, _)| x).max().expect("empty keyset?");
-    let min_x: i64 = image.keys().map(|&(x, _)| x).min().expect("empty keyset?");
-    let max_y: i64 = image.keys().map(|&(_, y)| y).max().expect("empty keyset?");
-    let min_y: i64 = image.keys().map(|&(_, y)| y).min().expect("empty keyset?");
-
-    image.get(&(max_x, max_y)).expect("invalid image").id
-        * image.get(&(min_x, max_y)).expect("invalid image").id
-        * image.get(&(max_x, min_y)).expect("invalid image").id
-        * image.get(&(min_x, min_y)).expect("invalid image").id
+struct LayoutInfo {
+    min_x: i64,
+    max_x: i64,
+    min_y: i64,
+    max_y: i64,
 }
 
-fn calculate_p2(image: &AHashMap<(i64, i64), Tile>) -> i64 {
-    0
+fn calculate_bounds(layout: &AHashMap<(i64, i64), Tile>) -> LayoutInfo {
+    let max_x: i64 = layout.keys().map(|&(x, _)| x).max().expect("empty keyset?");
+    let min_x: i64 = layout.keys().map(|&(x, _)| x).min().expect("empty keyset?");
+    let max_y: i64 = layout.keys().map(|&(_, y)| y).max().expect("empty keyset?");
+    let min_y: i64 = layout.keys().map(|&(_, y)| y).min().expect("empty keyset?");
+
+    LayoutInfo {
+        min_x,
+        max_x,
+        min_y,
+        max_y,
+    }
+}
+
+fn layout_to_image(layout: &AHashMap<(i64, i64), Tile>, bounds: &LayoutInfo) -> Array2<bool> {
+    let x_size: usize = (bounds.max_x - bounds.min_x) as usize + 1;
+    let y_size: usize = (bounds.max_y - bounds.min_y) as usize + 1;
+
+    Array2::from_shape_fn([y_size * 8, x_size * 8], |(y, x)| {
+        let tile_x: i64 = bounds.min_x + (x / 8) as i64;
+        let tile_y: i64 = bounds.min_y + (y / 8) as i64;
+
+        *layout
+            .get(&(tile_x, tile_y))
+            .expect("invalid tile")
+            .arr
+            .get((1 + y % 8, 1 + x % 8))
+            .expect("invalid tile index")
+    })
+}
+
+fn calculate_p1(layout: &AHashMap<(i64, i64), Tile>, bounds: &LayoutInfo) -> u64 {
+    layout
+        .get(&(bounds.max_x, bounds.max_y))
+        .expect("invalid layout")
+        .id
+        * layout
+            .get(&(bounds.min_x, bounds.max_y))
+            .expect("invalid layout")
+            .id
+        * layout
+            .get(&(bounds.max_x, bounds.min_y))
+            .expect("invalid layout")
+            .id
+        * layout
+            .get(&(bounds.min_x, bounds.min_y))
+            .expect("invalid layout")
+            .id
+}
+
+const SEA_MONSTER: &str = "                  # 
+#    ##    ##    ###
+ #  #  #  #  #  #   ";
+
+fn get_sea_monster_array() -> Array2<bool> {
+    let rows = SEA_MONSTER.split('\n').count();
+    let columns = SEA_MONSTER.split('\n').map(|x| x.len()).max().unwrap();
+    let v: Vec<bool> = SEA_MONSTER
+        .split('\n')
+        .flat_map(|x| x.bytes())
+        .map(|b| b == b'#')
+        .collect();
+
+    Array2::from_shape_vec([rows, columns], v).expect("sea monster construction failed")
+}
+
+fn count_monsters(image: &Array2<bool>, sea_monster: &ArrayView2<bool>) -> usize {
+    let sea_monster_ysize = sea_monster.dim().0;
+    let sea_monster_xsize = sea_monster.dim().1;
+
+    let mut num_monsters = 0;
+    for y in 0..image.dim().0 - sea_monster_ysize {
+        for x in 0..image.dim().1 - sea_monster_xsize {
+            let slice = image.slice(s![y..y + sea_monster_ysize, x..x + sea_monster_xsize]);
+
+            let is_monster = Zip::from(sea_monster).and(slice).all(|&m, &s| s || !m);
+
+            if is_monster {
+                num_monsters += 1;
+            }
+        }
+    }
+    num_monsters
+}
+
+fn count_true(data: &ArrayView2<bool>) -> usize {
+    data.iter().filter(|&itm| *itm).count()
+}
+
+fn calculate_p2(layout: &AHashMap<(i64, i64), Tile>, bounds: &LayoutInfo) -> usize {
+    let image = layout_to_image(layout, bounds);
+    let mut sea_monster: Array2<bool> = get_sea_monster_array();
+    let mut num_monsters = 0;
+
+    while num_monsters == 0 {
+        num_monsters = count_monsters(&image, &sea_monster.view());
+        if num_monsters == 0 {
+            // If no monsters found, flip monster and try again
+            num_monsters = count_monsters(&image, &sea_monster.slice(s![..,..;-1]));
+        }
+
+        if num_monsters == 0 {
+            // If still no monsters found, rotate monster 90deg and try again
+            sea_monster = sea_monster.slice(s![..,..;-1]).into_owned();
+            sea_monster.swap_axes(0, 1);
+        }
+    }
+
+    count_true(&image.view()) - num_monsters * count_true(&sea_monster.view())
 }
 
 fn main() {
     let args = Cli::parse();
     let raw_inp = fs::read_to_string(args.input).expect("can't open input file");
     let data = parse(&raw_inp);
-    let image = build_image(&data);
-    let p1 = calculate_p1(&image);
-    let p2 = calculate_p2(&image);
+    let layout = build_layout(&data);
+    let bounds = calculate_bounds(&layout);
+    let p1 = calculate_p1(&layout, &bounds);
+    let p2 = calculate_p2(&layout, &bounds);
     println!("{}\n{}", p1, p2);
 }
 
@@ -268,17 +363,29 @@ mod tests {
 
     #[test]
     fn test_p1_example() {
-        assert_eq!(
-            calculate_p1(&build_image(&parse(EXAMPLE_DATA))),
-            20899048083289
-        );
+        let layout = build_layout(&parse(EXAMPLE_DATA));
+        let bounds = calculate_bounds(&layout);
+        assert_eq!(calculate_p1(&layout, &bounds), 20899048083289);
     }
 
     #[test]
     fn test_p1_real() {
-        assert_eq!(
-            calculate_p1(&build_image(&parse(REAL_DATA))),
-            17148689442341
-        );
+        let layout = build_layout(&parse(REAL_DATA));
+        let bounds = calculate_bounds(&layout);
+        assert_eq!(calculate_p1(&layout, &bounds), 17148689442341);
+    }
+
+    #[test]
+    fn test_p2_example() {
+        let layout = build_layout(&parse(EXAMPLE_DATA));
+        let bounds = calculate_bounds(&layout);
+        assert_eq!(calculate_p2(&layout, &bounds), 273);
+    }
+
+    #[test]
+    fn test_p2_real() {
+        let layout = build_layout(&parse(REAL_DATA));
+        let bounds = calculate_bounds(&layout);
+        assert_eq!(calculate_p2(&layout, &bounds), 2009);
     }
 }
