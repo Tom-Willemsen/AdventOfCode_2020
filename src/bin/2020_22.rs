@@ -9,7 +9,7 @@ struct Cli {
     input: String,
 }
 
-fn parse(raw_inp: &str) -> (Vec<u32>, Vec<u32>) {
+fn parse(raw_inp: &str) -> (Vec<u8>, Vec<u8>) {
     raw_inp
         .trim()
         .split_once("\n\n")
@@ -17,7 +17,7 @@ fn parse(raw_inp: &str) -> (Vec<u32>, Vec<u32>) {
         .expect("invalid input format")
 }
 
-fn parse_deck(inp: &str) -> Vec<u32> {
+fn parse_deck(inp: &str) -> Vec<u8> {
     debug_assert!(inp.starts_with("Player "));
     inp.lines()
         .skip(1)
@@ -25,14 +25,14 @@ fn parse_deck(inp: &str) -> Vec<u32> {
         .collect()
 }
 
-fn score(data: impl DoubleEndedIterator<Item = u32>) -> u32 {
-    data.rev().zip(1u32..).map(|(card, pos)| pos * card).sum()
+fn score(data: impl DoubleEndedIterator<Item = u8>) -> u64 {
+    data.rev().map(u64::from).zip(1u64..).map(|(card, pos)| pos * card).sum()
 }
 
-fn create_deques(p1_cards: &[u32], p2_cards: &[u32]) -> (VecDeque<u32>, VecDeque<u32>) {
+fn create_deques(p1_cards: &[u8], p2_cards: &[u8]) -> (VecDeque<u8>, VecDeque<u8>) {
     let total_cards = p1_cards.len() + p2_cards.len();
-    let mut p1: VecDeque<u32> = VecDeque::with_capacity(total_cards);
-    let mut p2: VecDeque<u32> = VecDeque::with_capacity(total_cards);
+    let mut p1: VecDeque<u8> = VecDeque::with_capacity(total_cards);
+    let mut p2: VecDeque<u8> = VecDeque::with_capacity(total_cards);
 
     p1_cards.iter().for_each(|&itm| p1.push_back(itm));
     p2_cards.iter().for_each(|&itm| p2.push_back(itm));
@@ -40,7 +40,7 @@ fn create_deques(p1_cards: &[u32], p2_cards: &[u32]) -> (VecDeque<u32>, VecDeque
     (p1, p2)
 }
 
-fn calculate_p1(p1_cards: &[u32], p2_cards: &[u32]) -> u32 {
+fn calculate_p1(p1_cards: &[u8], p2_cards: &[u8]) -> u64 {
     let (mut p1, mut p2) = create_deques(p1_cards, p2_cards);
 
     while !p1.is_empty() && !p2.is_empty() {
@@ -69,11 +69,11 @@ enum Winner {
     P2,
 }
 
-fn p2_game_recursive(p1: &mut VecDeque<u32>, p2: &mut VecDeque<u32>) -> Winner {
-    let mut seen: AHashSet<(VecDeque<u32>, VecDeque<u32>)> = AHashSet::with_capacity(512);
+fn p2_game_recursive(p1: &mut VecDeque<u8>, p2: &mut VecDeque<u8>) -> Winner {
+    let mut seen: AHashSet<(Vec<u8>, Vec<u8>)> = AHashSet::with_capacity(512);
 
     while !p1.is_empty() && !p2.is_empty() {
-        if !seen.insert((p1.clone(), p2.clone())) {
+        if !seen.insert((p1.iter().copied().collect(), p2.iter().copied().collect())) {
             return Winner::P1;
         }
 
@@ -81,13 +81,13 @@ fn p2_game_recursive(p1: &mut VecDeque<u32>, p2: &mut VecDeque<u32>) -> Winner {
         let c2 = p2.pop_front().unwrap();
 
         let round_winner =
-            if u32::try_from(p1.len()).unwrap() >= c1 && u32::try_from(p2.len()).unwrap() >= c2 {
-                let mut new_p1_cards: VecDeque<u32> = p1
+            if u8::try_from(p1.len()).unwrap() >= c1 && u8::try_from(p2.len()).unwrap() >= c2 {
+                let mut new_p1_cards: VecDeque<u8> = p1
                     .iter()
                     .take(usize::try_from(c1).unwrap())
                     .cloned()
                     .collect();
-                let mut new_p2_cards: VecDeque<u32> = p2
+                let mut new_p2_cards: VecDeque<u8> = p2
                     .iter()
                     .take(usize::try_from(c2).unwrap())
                     .cloned()
@@ -107,7 +107,6 @@ fn p2_game_recursive(p1: &mut VecDeque<u32>, p2: &mut VecDeque<u32>) -> Winner {
             p2.push_back(c1);
         }
     }
-    // println!("seen len {:?}", seen.len());
 
     if p2.is_empty() {
         Winner::P1
@@ -116,7 +115,7 @@ fn p2_game_recursive(p1: &mut VecDeque<u32>, p2: &mut VecDeque<u32>) -> Winner {
     }
 }
 
-fn calculate_p2(p1_cards: &[u32], p2_cards: &[u32]) -> u32 {
+fn calculate_p2(p1_cards: &[u8], p2_cards: &[u8]) -> u64 {
     let (mut p1, mut p2) = create_deques(p1_cards, p2_cards);
 
     let winner = p2_game_recursive(&mut p1, &mut p2);
