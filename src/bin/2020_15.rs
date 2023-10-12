@@ -1,6 +1,10 @@
 use bitvec::prelude::*;
 use clap::Parser;
+use mimalloc::MiMalloc;
 use std::fs;
+
+#[global_allocator]
+static ALLOCATOR: MiMalloc = MiMalloc;
 
 #[derive(Parser)]
 struct Cli {

@@ -1,9 +1,13 @@
 use ahash::{AHashMap, AHashSet};
 use clap::Parser;
+use mimalloc::MiMalloc;
 use ndarray::{s, ArcArray, Array2, ArrayView2, Ix2, Zip};
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
+
+#[global_allocator]
+static ALLOCATOR: MiMalloc = MiMalloc;
 
 #[derive(Parser)]
 struct Cli {

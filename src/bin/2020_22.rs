@@ -1,7 +1,11 @@
 use ahash::AHashSet;
 use clap::Parser;
+use mimalloc::MiMalloc;
 use std::collections::VecDeque;
 use std::fs;
+
+#[global_allocator]
+static ALLOCATOR: MiMalloc = MiMalloc;
 
 #[derive(Parser)]
 struct Cli {
@@ -26,7 +30,11 @@ fn parse_deck(inp: &str) -> Vec<u8> {
 }
 
 fn score(data: impl DoubleEndedIterator<Item = u8>) -> u64 {
-    data.rev().map(u64::from).zip(1u64..).map(|(card, pos)| pos * card).sum()
+    data.rev()
+        .map(u64::from)
+        .zip(1u64..)
+        .map(|(card, pos)| pos * card)
+        .sum()
 }
 
 fn create_deques(p1_cards: &[u8], p2_cards: &[u8]) -> (VecDeque<u8>, VecDeque<u8>) {
@@ -69,35 +77,40 @@ enum Winner {
     P2,
 }
 
+fn deque_subset(old: &VecDeque<u8>, size: u8, reserve_extra: u8) -> VecDeque<u8> {
+    let mut result = VecDeque::with_capacity(usize::from(size) + usize::from(reserve_extra));
+    old.iter()
+        .take(usize::from(size))
+        .for_each(|&x| result.push_back(x));
+    result
+}
+
 fn p2_game_recursive(p1: &mut VecDeque<u8>, p2: &mut VecDeque<u8>) -> Winner {
-    let mut seen: AHashSet<(Vec<u8>, Vec<u8>)> = AHashSet::with_capacity(512);
+    let mut seen: AHashSet<Vec<u8>> = AHashSet::with_capacity(256);
 
     while !p1.is_empty() && !p2.is_empty() {
-        if !seen.insert((p1.iter().copied().collect(), p2.iter().copied().collect())) {
+        let c2 = p2.pop_front().unwrap();
+
+        if !seen.insert(p2.iter().copied().collect()) {
+            p2.push_front(c2);
             return Winner::P1;
         }
 
         let c1 = p1.pop_front().unwrap();
-        let c2 = p2.pop_front().unwrap();
 
-        let round_winner =
-            if u8::try_from(p1.len()).unwrap() >= c1 && u8::try_from(p2.len()).unwrap() >= c2 {
-                let mut new_p1_cards: VecDeque<u8> = p1
-                    .iter()
-                    .take(usize::try_from(c1).unwrap())
-                    .cloned()
-                    .collect();
-                let mut new_p2_cards: VecDeque<u8> = p2
-                    .iter()
-                    .take(usize::try_from(c2).unwrap())
-                    .cloned()
-                    .collect();
-                p2_game_recursive(&mut new_p1_cards, &mut new_p2_cards)
-            } else if c1 > c2 {
+        let round_winner = if p1.len() >= usize::from(c1) && p2.len() >= usize::from(c2) {
+            if p1.iter().take(usize::from(c1)).max() > p2.iter().take(usize::from(c2)).max() {
                 Winner::P1
             } else {
-                Winner::P2
-            };
+                let mut new_p1_cards = deque_subset(p1, c1, c2);
+                let mut new_p2_cards = deque_subset(p2, c2, c1);
+                p2_game_recursive(&mut new_p1_cards, &mut new_p2_cards)
+            }
+        } else if c1 > c2 {
+            Winner::P1
+        } else {
+            Winner::P2
+        };
 
         if round_winner == Winner::P1 {
             p1.push_back(c1);
