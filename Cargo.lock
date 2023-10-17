@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "advent-of-code-rs"
+name = "advent-of-code-2020"
 version = "0.1.0"
 dependencies = [
  "ahash",
